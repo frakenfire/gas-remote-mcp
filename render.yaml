@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: gas-remote-mcp
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: MCP_BEARER_TOKEN
+        value: mcp_secret_token_1234!
+      - key: GOOGLE_CLIENT_ID
+        value: 536525270613-veoviruvaoq80ab3ijdeuidpigmfnp40.apps.googleusercontent.com
+      - key: GOOGLE_CLIENT_SECRET
+        value: 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
+      - key: GOOGLE_REFRESH_TOKEN
+        value: 1//0eRUDyU5Rx-I3CgYIARAAGA4SNwF-L9Ir2hUvGY-uSEPihZfJ5VI49w8uQbkN2asdqTRTvARWGOUMq3AOyMvzN3tyVNb_TGmXKJM
+      - key: ALLOWED_SCRIPT_IDS
+        placeholder: "수정을 허용할 구글 Apps Script ID들을 쉼표로 구분해 입력하세요 (예: 1A_xxxx,1B_yyyy)"
