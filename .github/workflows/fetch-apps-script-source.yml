@@ -1,0 +1,43 @@
+name: Fetch Apps Script source
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/fetch-apps-script-source.yml'
+      - 'scripts/fetch-project-source.mjs'
+  pull_request:
+    paths:
+      - '.github/workflows/fetch-apps-script-source.yml'
+      - 'scripts/fetch-project-source.mjs'
+      - 'scripts/trigger-fetch.txt'
+
+permissions:
+  contents: read
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Fetch project source
+        env:
+          GAS_SCRIPT_ID: 18fNNCKgGLXiiZU9hNSYr5b9j9paXbWbtROpUHQBPRIqGEqRwtLMDgcuc
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+          GAS_PROJECT_OUTPUT: artifacts/project-source.json
+        run: node scripts/fetch-project-source.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: project-source
+          path: artifacts/project-source.json
+          if-no-files-found: error
+          retention-days: 1
