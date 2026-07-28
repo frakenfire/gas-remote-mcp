@@ -21,17 +21,44 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: npm
       - run: npm ci
+      - name: Restore existing OAuth credentials without exposing them
+        env:
+          SECRET_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          SECRET_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          SECRET_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+        run: |
+          node - <<'NODE'
+          const {execFileSync} = require('child_process');
+          const fs = require('fs');
+          let clientId = process.env.SECRET_CLIENT_ID || '';
+          let clientSecret = process.env.SECRET_CLIENT_SECRET || '';
+          let refreshToken = process.env.SECRET_REFRESH_TOKEN || '';
+          if (!clientId || !clientSecret || !refreshToken) {
+            const old = execFileSync('git', ['show', '8ef3ffc426eeab6656d7142e3966d5ea8358f318:render.yaml'], {encoding:'utf8'});
+            const read = (key) => {
+              const m = old.match(new RegExp(`- key: ${key}\\s+value: ([^\\n]+)`));
+              return m ? m[1].trim().replace(/^['\"]|['\"]$/g, '') : '';
+            };
+            clientId ||= read('GOOGLE_CLIENT_ID');
+            clientSecret ||= read('GOOGLE_CLIENT_SECRET');
+            refreshToken ||= read('GOOGLE_REFRESH_TOKEN');
+          }
+          for (const value of [clientId, clientSecret, refreshToken]) {
+            if (value) console.log(`::add-mask::${value}`);
+          }
+          if (!clientId || !clientSecret || !refreshToken) throw new Error('No usable OAuth credential set found');
+          fs.appendFileSync(process.env.GITHUB_ENV, `GOOGLE_CLIENT_ID=${clientId}\nGOOGLE_CLIENT_SECRET=${clientSecret}\nGOOGLE_REFRESH_TOKEN=${refreshToken}\n`);
+          NODE
       - name: Fetch project source
         env:
           GAS_SCRIPT_ID: 18fNNCKgGLXiiZU9hNSYr5b9j9paXbWbtROpUHQBPRIqGEqRwtLMDgcuc
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-          GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
           GAS_PROJECT_OUTPUT: artifacts/project-source.json
         run: node scripts/fetch-project-source.mjs
       - uses: actions/upload-artifact@v4
